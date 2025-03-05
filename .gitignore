@@ -1,0 +1,17 @@
+__pycache__/
+*.pyc
+*.pyo
+*.db
+*.xlsx
+
+*.log
+
+/venv
+/reports
+/logs
+
+geckodriver.exe
+load-env-as-secrets.ps1
+
+foo.txt
+test.py
