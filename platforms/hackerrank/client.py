@@ -100,13 +100,16 @@ class HackerRankClient(BasePlatformClient):
             force_refresh (bool): Force refresh the cache even if already initialized
         """
         if self.is_cache_initialized and not force_refresh:
+            logger.debug("Cache already initialized, skipping initialization")
             return
             
         if not contest_urls:
             logger.warning("No contest URLs provided for cache initialization")
             return
             
-        logger.info(f"Initializing HackerRank leaderboard cache for {len(contest_urls)} contests...")
+        # Filter out duplicate contest URLs while maintaining order
+        unique_contest_urls = list(dict.fromkeys(contest_urls))
+        logger.info(f"Initializing HackerRank leaderboard cache for {len(unique_contest_urls)} contests...")
         start_time = asyncio.get_event_loop().time()
         
         # Check if we have cache in the database first
@@ -120,51 +123,82 @@ class HackerRankClient(BasePlatformClient):
                 
                 if db_cache_entries:
                     # Load from database cache
-                    logger.info(f"Loading HackerRank cache from database: {len(db_cache_entries)} fresh entries")
+                    cache_entry_count = len(db_cache_entries)
+                    logger.info(f"Loading HackerRank cache from database: {cache_entry_count} fresh entries")
+                    loaded_contest_ids = set()
                     
                     for entry in db_cache_entries:
                         contest_id = entry.cache_id
-                        self.leaderboard_cache[contest_id] = entry.entries
+                        loaded_contest_ids.add(contest_id)
                         
-                        # Also index by user handle for faster lookups
-                        for user_entry in entry.entries:
-                            user_handle = user_entry.get("hacker", "").lower()
-                            if user_handle:
-                                if user_handle not in self.user_cache:
-                                    self.user_cache[user_handle] = {}
-                                    
-                                self.user_cache[user_handle][contest_id] = user_entry
+                        # Only load if not already in memory cache
+                        if contest_id not in self.leaderboard_cache:
+                            self.leaderboard_cache[contest_id] = entry.entries
+                            
+                            # Also index by user handle for faster lookups
+                            for user_entry in entry.entries:
+                                user_handle = user_entry.get("hacker", "").lower()
+                                if user_handle:
+                                    if user_handle not in self.user_cache:
+                                        self.user_cache[user_handle] = {}
+                                        
+                                    self.user_cache[user_handle][contest_id] = user_entry
                     
-                    self.is_cache_initialized = True
-                    logger.info(f"HackerRank cache loaded from database: {len(self.leaderboard_cache)} contests with {len(self.user_cache)} unique users")
-                    return
+                    # Extract contest IDs from URLs
+                    contest_ids_to_fetch = []
+                    for contest_url in unique_contest_urls:
+                        contest_id = extract_contest_id(contest_url)
+                        if contest_id and contest_id not in loaded_contest_ids:
+                            contest_ids_to_fetch.append((contest_url, contest_id))
+                    
+                    if not contest_ids_to_fetch:
+                        # All contests are already in cache
+                        self.is_cache_initialized = True
+                        logger.info(f"All requested contests are already cached. Cache contains {len(self.leaderboard_cache)} contests with {len(self.user_cache)} unique users")
+                        return
+                    
+                    logger.info(f"Need to fetch {len(contest_ids_to_fetch)} additional contests not in database cache")
+                    
                 else:
                     logger.info("No fresh HackerRank cache entries found in database, will fetch fresh data")
+                    # Continue with extracting contest IDs
+                    contest_ids_to_fetch = []
+                    for contest_url in unique_contest_urls:
+                        contest_id = extract_contest_id(contest_url)
+                        if contest_id:
+                            contest_ids_to_fetch.append((contest_url, contest_id))
+                        else:
+                            logger.warning(f"Could not extract contest ID from URL: {contest_url}")
             except Exception as e:
                 logger.error(f"Error loading HackerRank cache from database: {e}")
-                # Continue with fetching fresh data
-        
-        # If force refresh or no database cache, fetch fresh data
-        db_cache_entries_to_save = []
+                # Continue with fetching fresh data for all contests
+                contest_ids_to_fetch = []
+                for contest_url in unique_contest_urls:
+                    contest_id = extract_contest_id(contest_url)
+                    if contest_id:
+                        contest_ids_to_fetch.append((contest_url, contest_id))
+                    else:
+                        logger.warning(f"Could not extract contest ID from URL: {contest_url}")
+        else:
+            # If forcing refresh, process all contests
+            contest_ids_to_fetch = []
+            for contest_url in unique_contest_urls:
+                contest_id = extract_contest_id(contest_url)
+                if contest_id:
+                    contest_ids_to_fetch.append((contest_url, contest_id))
+                else:
+                    logger.warning(f"Could not extract contest ID from URL: {contest_url}")
         
         # Track which contests we've successfully processed
         processed_contests = set()
-        
-        # First try to get the list of all contest IDs
-        contest_ids = []
-        for contest_url in contest_urls:
-            contest_id = extract_contest_id(contest_url)
-            if contest_id:
-                contest_ids.append((contest_url, contest_id))
-            else:
-                logger.warning(f"Could not extract contest ID from URL: {contest_url}")
+        db_cache_entries_to_save = []
         
         max_retries = 3  # Maximum number of retries for rate-limited contests
         
         # Process each contest
-        for contest_url, contest_id in contest_ids:
+        for contest_url, contest_id in contest_ids_to_fetch:
             # Skip if we've already processed this contest
-            if contest_id in processed_contests:
+            if contest_id in processed_contests or contest_id in self.leaderboard_cache:
                 continue
                 
             logger.info(f"Caching leaderboard for contest: {contest_id}")
@@ -272,7 +306,7 @@ class HackerRankClient(BasePlatformClient):
         total_time = asyncio.get_event_loop().time() - start_time
         logger.info(f"HackerRank cache initialization completed in {total_time:.2f}s")
         logger.info(f"Cached {len(self.leaderboard_cache)} contests with {len(self.user_cache)} unique users")
-        logger.info(f"Successfully processed {len(processed_contests)}/{len(contest_ids)} contests")
+        logger.info(f"Successfully processed {len(processed_contests)}/{len(contest_ids_to_fetch)} contests")
             
     async def get_contest_leaderboard(self, contest_url: str, handles: Set[str]) -> Dict[str, float]:
         """Get scores from a HackerRank contest leaderboard
@@ -390,8 +424,14 @@ class HackerRankClient(BasePlatformClient):
         results = {}
         
         if handle in self.user_cache:
-            for contest_id, entry in self.user_cache[handle].items():
-                # Verify this cache entry is fresh
+            # Get all contest IDs for this user
+            contest_ids = list(self.user_cache[handle].keys())
+            
+            # Instead of checking each contest separately, preload cache entries for all contests
+            # that need to be checked
+            fresh_cache_entries = {}
+            
+            for contest_id in contest_ids:
                 try:
                     cache_entry = self.cache_repository.get_cache_entry(
                         Platform.HACKERRANK, 
@@ -400,18 +440,26 @@ class HackerRankClient(BasePlatformClient):
                     )
                     
                     if cache_entry:
-                        # If we have a fresh cache, find the user in it
-                        for user_entry in cache_entry.entries:
-                            user_handle = user_entry.get("hacker", "").lower()
-                            if user_handle == handle:
-                                results[contest_id] = user_entry.get('score', 0)
-                                break
-                    else:
-                        # Otherwise use in-memory cache if it exists
-                        # (but this might be stale)
-                        results[contest_id] = entry.get('score', 0)
+                        fresh_cache_entries[contest_id] = cache_entry
                 except Exception as e:
                     logger.error(f"Error checking cache freshness for contest {contest_id}: {e}")
+            
+            # Now process all contests
+            for contest_id, entry in self.user_cache[handle].items():
+                if contest_id in fresh_cache_entries:
+                    # If we have a fresh cache, find the user in it
+                    found = False
+                    for user_entry in fresh_cache_entries[contest_id].entries:
+                        user_handle = user_entry.get("hacker", "").lower()
+                        if user_handle == handle:
+                            results[contest_id] = user_entry.get('score', 0)
+                            found = True
+                            break
+                    
+                    # If user not found in fresh cache, they might have been removed
+                    if not found:
+                        logger.debug(f"User {handle} not found in fresh cache for contest {contest_id}")
+                else:
                     # Use in-memory cache as fallback
                     results[contest_id] = entry.get('score', 0)
                 

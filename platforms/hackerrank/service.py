@@ -19,10 +19,66 @@ class HackerRankService(BasePlatformService):
         """Initialize the service"""
         super().__init__()
         self.contests_config = load_contests_config()
+        # Cache for contest URLs to avoid redundant lookups
+        self.contest_urls_cache = {}  # Format: {(college.value, batch.value): contest_urls}
+        # Flag to track if we've warmed up the cache
+        self.cache_initialized = False
         
     def _create_client(self) -> HackerRankClient:
         """Create the HackerRank client"""
         return HackerRankClient()
+    
+    async def init_client(self):
+        """Initialize the client and warm up the cache"""
+        await super().init_client()
+        
+        # Warm up cache if not already done
+        if not self.cache_initialized:
+            await self._warm_up_cache()
+            self.cache_initialized = True
+    
+    async def _warm_up_cache(self):
+        """Warm up the cache with all contests"""
+        # Get all college-batch combinations
+        all_contest_urls = []
+        
+        for college in College:
+            for batch in Batch:
+                # Get contest URLs for this college and batch
+                urls = self._get_contest_urls(college, batch)
+                if urls:
+                    all_contest_urls.extend(urls)
+        
+        # Remove duplicates while preserving order
+        unique_urls = list(dict.fromkeys(all_contest_urls))
+        
+        if unique_urls:
+            logger.info(f"Warming up HackerRank cache with {len(unique_urls)} unique contests")
+            await self.client.initialize_cache(unique_urls)
+            logger.info("Cache warmup complete")
+        else:
+            logger.warning("No contest URLs found for cache warmup")
+        
+    def _get_contest_urls(self, college: College, batch: Batch) -> List[str]:
+        """Get contest URLs with caching
+        
+        Args:
+            college (College): College enum value
+            batch (Batch): Batch enum value
+            
+        Returns:
+            List[str]: List of contest URLs
+        """
+        cache_key = (college.value, batch.value)
+        
+        # Check if URLs are in cache
+        if cache_key in self.contest_urls_cache:
+            return self.contest_urls_cache[cache_key]
+            
+        # Get from config and cache the result
+        urls = get_contest_urls_for_college_batch(college, batch, self.contests_config)
+        self.contest_urls_cache[cache_key] = urls
+        return urls
         
     async def get_participant_data(self, participant: Participant) -> PlatformStatus:
         """Get data for a participant
@@ -50,12 +106,8 @@ class HackerRankService(BasePlatformService):
             college = College(participant.college)
             batch = Batch(participant.batch)
             
-            # Get contest URLs for this college and batch
-            contest_urls = get_contest_urls_for_college_batch(
-                college, 
-                batch,
-                self.contests_config
-            )
+            # Get contest URLs for this college and batch using cached method
+            contest_urls = self._get_contest_urls(college, batch)
             
             if not contest_urls:
                 logger.warning(
@@ -144,12 +196,8 @@ class HackerRankService(BasePlatformService):
                 college_enum = College[college]
                 batch_enum = Batch[f"_{batch_str}"] # Doing this because the batch enum is defined with an underscore (Example: _2025)
                 
-                # Get contest URLs for this college and batch
-                contest_urls = get_contest_urls_for_college_batch(
-                    college_enum,
-                    batch_enum,
-                    self.contests_config
-                )
+                # Get contest URLs for this college and batch using cached method
+                contest_urls = self._get_contest_urls(college_enum, batch_enum)
                 
                 if not contest_urls:
                     logger.warning(

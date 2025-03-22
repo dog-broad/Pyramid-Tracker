@@ -305,16 +305,19 @@ class LeaderboardCacheRepository:
             raise ValueError("Database client is required")
         self.db_client = db_client
         
+        # In-memory cache to avoid redundant database access
+        self._memory_cache = {}  # Format: {(platform, cache_id): (cache_entry, timestamp)}
+    
     def get_collection(self) -> Collection:
-        """Get the leaderboard cache collection"""
+        """Get the collection"""
         return self.db_client.get_collection(self.COLLECTION_NAME)
     
     def get_or_create_collection(self) -> Collection:
-        """Get or create the leaderboard cache collection"""
+        """Get or create the collection"""
         return self.db_client.get_or_create_collection(self.COLLECTION_NAME)
-
+    
     def is_cache_stale(self, cache_entry: LeaderboardCache) -> bool:
-        """Check if a cache entry is stale (older than max allowed age)
+        """Check if a cache entry is stale
         
         Args:
             cache_entry (LeaderboardCache): Cache entry to check
@@ -322,11 +325,10 @@ class LeaderboardCacheRepository:
         Returns:
             bool: True if cache is stale, False otherwise
         """
-        if not cache_entry:
+        if not cache_entry.last_updated:
             return True
             
-        now = datetime.now()
-        age = now - cache_entry.last_updated
+        age = datetime.now() - cache_entry.last_updated
         return age.days >= self.CACHE_MAX_AGE_DAYS
         
     def save_cache_entry(self, cache_entry: LeaderboardCache) -> None:
@@ -458,6 +460,28 @@ class LeaderboardCacheRepository:
         Returns:
             Optional[LeaderboardCache]: Cache entry if found and not stale, None otherwise
         """
+        # Check in-memory cache first
+        cache_key = (platform.value, cache_id)
+        memory_result = self._memory_cache.get(cache_key)
+        
+        if memory_result:
+            cache_entry, timestamp = memory_result
+            
+            # Check if in-memory cache is still valid (less than 5 minutes old)
+            age = datetime.now() - timestamp
+            if age.total_seconds() < 300:  # 5 minutes
+                # Check freshness if required
+                if check_freshness and self.is_cache_stale(cache_entry):
+                    return None
+                # Only log at debug level for memory cache hits
+                logger.debug(
+                    "Using memory-cached leaderboard entry",
+                    platform=platform.name,
+                    cache_id=cache_id,
+                    entries_count=len(cache_entry.entries)
+                )
+                return cache_entry
+        
         try:
             collection = self.get_collection()
             doc = collection.find_one({
@@ -477,6 +501,9 @@ class LeaderboardCacheRepository:
                     )
                     return None
                     
+                # Store in memory cache
+                self._memory_cache[cache_key] = (cache_entry, datetime.now())
+                
                 logger.info(
                     "Retrieved leaderboard cache entry",
                     platform=platform.name,
