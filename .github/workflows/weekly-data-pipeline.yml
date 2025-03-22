@@ -74,8 +74,10 @@ jobs:
               secret_value=$(echo '${{ toJSON(secrets) }}' | jq -r --arg key "$secret_name" '.[$key]')
               # Find matching line in .env file and replace it, or append if not found
               if grep -q "^${secret_name}=" .env; then
+                echo "Updating ${secret_name} in .env"
                 sed -i "s|^${secret_name}=.*|${secret_name}=${secret_value}|g" .env
               else
+                echo "Adding ${secret_name} to .env"
                 echo "${secret_name}=${secret_value}" >> .env
               fi
             fi
