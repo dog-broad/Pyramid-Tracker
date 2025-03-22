@@ -76,6 +76,7 @@ jobs:
               if grep -q "^${secret_name}=" .env; then
                 sed -i "s|^${secret_name}=.*|${secret_name}=${secret_value}|g" .env
               else
+                echo "Adding ${secret_name} to .env"
                 echo "${secret_name}=${secret_value}" >> .env
               fi
             fi
