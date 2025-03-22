@@ -102,7 +102,7 @@ jobs:
             --sample ${{ github.event.inputs.sample }}
             
       - name: Upload logs
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: multi-platform-scrape-logs-${{ github.event.inputs.college }}-${{ github.event.inputs.batch }}-${{ github.run_id }}
           path: logfile.log

@@ -45,33 +45,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
         
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - name: Download environment setup
+        uses: actions/download-artifact@v4
         with:
-          python-version: '3.10'
-          
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          
-      - name: Create .env file
-        run: |
-          cp .env.example .env
-          # Dynamically add all secrets to the .env file
-          for secret_name in $(echo '${{ toJSON(secrets) }}' | jq -r 'keys[]'); do
-            # Skip GitHub default secrets
-            if [[ $secret_name != GITHUB_* && $secret_name != ACTIONS_* ]]; then
-              # Get the secret value
-              secret_value=$(echo '${{ toJSON(secrets) }}' | jq -r --arg key "$secret_name" '.[$key]')
-              # Find matching line in .env file and replace it, or append if not found
-              if grep -q "^${secret_name}=" .env; then
-                sed -i "s|^${secret_name}=.*|${secret_name}=${secret_value}|g" .env
-              else
-                echo "${secret_name}=${secret_value}" >> .env
-              fi
-            fi
-          done
+          name: environment-setup
           
       - name: Upload participants
         if: ${{ github.event.inputs.action == 'upload' }}
@@ -94,7 +71,7 @@ jobs:
             --batch ${{ github.event.inputs.batch }}
             
       - name: Upload logs
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: participant-management-logs-${{ github.run_id }}
           path: logfile.log
