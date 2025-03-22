@@ -44,6 +44,7 @@ class LoggingSettings(BaseModel):
 # ==============================
 class DatabaseSettings(BaseModel):
     mongodb_uri: str = Field(...)
+    mongodb_username: str = Field(...)
     mongodb_password: str = Field(...)
     mongodb_cache_name: str = Field(...)
 
@@ -51,6 +52,7 @@ class DatabaseSettings(BaseModel):
     def from_env(cls, prefix: str = "DB_") -> 'DatabaseSettings':
         return cls(
             mongodb_uri=get_env_variable("MONGODB_URI", prefix),
+            mongodb_username=get_env_variable("MONGODB_USERNAME", prefix),
             mongodb_password=get_env_variable("MONGODB_PASSWORD", prefix),
             mongodb_cache_name=get_env_variable("MONGODB_CACHE_NAME", prefix)
         )

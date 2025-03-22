@@ -33,13 +33,14 @@ class DatabaseClient:
             # Use the MongoDB URI and password from the settings
             self._client = pymongo.MongoClient(
                 settings.db.mongodb_uri,
+                username=settings.db.mongodb_username,
                 password=settings.db.mongodb_password,
                 maxPoolSize=10,
                 minPoolSize=1,
                 retryWrites=True
             )
             self._db = self._client[db_name]
-            logger.info(f"Database connection established to {db_name}")
+            logger.info(f"Database connection established to {db_name} with username {settings.db.mongodb_username}")
             self._initialized = True
         except PyMongoError as e:
             logger.error("Failed to connect to database", error=str(e), exc_info=True)
