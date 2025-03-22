@@ -98,6 +98,14 @@ jobs:
             --platforms $platforms \
             --output pipeline_output/leaderboard_${{ github.event_name == 'workflow_dispatch' && github.event.inputs.college || 'CMRIT' }}_${{ github.event_name == 'workflow_dispatch' && github.event.inputs.batch || '_2025' }}.xlsx \
             --charts
+
+      - name: Log complete file/folder structure of complete repository with max depth
+        run: |
+          tree -L 10 .
+
+      - name: Log complete file/folder structure of pipeline_output directory with max depth
+        run: |
+          tree -L 10 pipeline_output
             
       - name: Upload leaderboard
         uses: actions/upload-artifact@v4
