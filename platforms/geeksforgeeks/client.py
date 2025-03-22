@@ -19,8 +19,8 @@ from db.client import DatabaseClient
 logger = get_logger(__name__)
 settings = get_settings()
 
-GFG_API_URL = settings.url.gfg_api_url
-GFG_WEEKLY_CONTEST_URL = settings.url.gfg_weekly_contest_url
+GFG_API_URL = settings.url.gfg_api_url + "?handle="
+GFG_WEEKLY_CONTEST_URL = settings.url.gfg_weekly_contest_url + "?leaderboard_type=0&page="
 GEEKSFORGEEKS_URL = settings.url.geeksforgeeks_url
 GFG_USERNAME = settings.api.gfg_username
 GFG_PASSWORD = settings.api.gfg_password
