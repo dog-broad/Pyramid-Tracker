@@ -8,3 +8,4 @@ python-dotenv
 PyYAML
 structlog
 tenacity
+xlsxwriter
