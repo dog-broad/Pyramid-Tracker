@@ -70,9 +70,20 @@ jobs:
       - name: Create .env file
         run: |
           cp .env.example .env
-          # Update the .env file with actual credentials
-          sed -i 's|DB_MONGODB_URI=.*|DB_MONGODB_URI=${{ secrets.MONGODB_URI }}|g' .env
-          sed -i 's|DB_MONGODB_PASSWORD=.*|DB_MONGODB_PASSWORD=${{ secrets.MONGODB_PASSWORD }}|g' .env
+          # Dynamically add all secrets to the .env file
+          for secret_name in $(echo '${{ toJSON(secrets) }}' | jq -r 'keys[]'); do
+            # Skip GitHub default secrets
+            if [[ $secret_name != GITHUB_* && $secret_name != ACTIONS_* ]]; then
+              # Get the secret value
+              secret_value=$(echo '${{ toJSON(secrets) }}' | jq -r --arg key "$secret_name" '.[$key]')
+              # Find matching line in .env file and replace it, or append if not found
+              if grep -q "^${secret_name}=" .env; then
+                sed -i "s|^${secret_name}=.*|${secret_name}=${secret_value}|g" .env
+              else
+                echo "${secret_name}=${secret_value}" >> .env
+              fi
+            fi
+          done
           
       - name: Evaluate participants
         run: |
@@ -111,9 +122,20 @@ jobs:
       - name: Create .env file
         run: |
           cp .env.example .env
-          # Update the .env file with actual credentials
-          sed -i 's|DB_MONGODB_URI=.*|DB_MONGODB_URI=${{ secrets.MONGODB_URI }}|g' .env
-          sed -i 's|DB_MONGODB_PASSWORD=.*|DB_MONGODB_PASSWORD=${{ secrets.MONGODB_PASSWORD }}|g' .env
+          # Dynamically add all secrets to the .env file
+          for secret_name in $(echo '${{ toJSON(secrets) }}' | jq -r 'keys[]'); do
+            # Skip GitHub default secrets
+            if [[ $secret_name != GITHUB_* && $secret_name != ACTIONS_* ]]; then
+              # Get the secret value
+              secret_value=$(echo '${{ toJSON(secrets) }}' | jq -r --arg key "$secret_name" '.[$key]')
+              # Find matching line in .env file and replace it, or append if not found
+              if grep -q "^${secret_name}=" .env; then
+                sed -i "s|^${secret_name}=.*|${secret_name}=${secret_value}|g" .env
+              else
+                echo "${secret_name}=${secret_value}" >> .env
+              fi
+            fi
+          done
           
       - name: Create output directory
         run: mkdir -p leaderboard_output

@@ -70,15 +70,20 @@ jobs:
       - name: Create .env file
         run: |
           cp .env.example .env
-          # Update the .env file with actual credentials
-          sed -i 's|DB_MONGODB_URI=.*|DB_MONGODB_URI=${{ secrets.MONGODB_URI }}|g' .env
-          sed -i 's|DB_MONGODB_PASSWORD=.*|DB_MONGODB_PASSWORD=${{ secrets.MONGODB_PASSWORD }}|g' .env
-          sed -i 's|API_CODEFORCES_KEY=.*|API_CODEFORCES_KEY=${{ secrets.API_CODEFORCES_KEY }}|g' .env
-          sed -i 's|API_CODEFORCES_SECRET=.*|API_CODEFORCES_SECRET=${{ secrets.API_CODEFORCES_SECRET }}|g' .env
-          sed -i 's|API_CODECHEF_CLIENT_ID=.*|API_CODECHEF_CLIENT_ID=${{ secrets.API_CODECHEF_CLIENT_ID }}|g' .env
-          sed -i 's|API_CODECHEF_CLIENT_SECRET=.*|API_CODECHEF_CLIENT_SECRET=${{ secrets.API_CODECHEF_CLIENT_SECRET }}|g' .env
-          sed -i 's|API_GFG_USERNAME=.*|API_GFG_USERNAME=${{ secrets.API_GFG_USERNAME }}|g' .env
-          sed -i 's|API_GFG_PASSWORD=.*|API_GFG_PASSWORD=${{ secrets.API_GFG_PASSWORD }}|g' .env
+          # Dynamically add all secrets to the .env file
+          for secret_name in $(echo '${{ toJSON(secrets) }}' | jq -r 'keys[]'); do
+            # Skip GitHub default secrets
+            if [[ $secret_name != GITHUB_* && $secret_name != ACTIONS_* ]]; then
+              # Get the secret value
+              secret_value=$(echo '${{ toJSON(secrets) }}' | jq -r --arg key "$secret_name" '.[$key]')
+              # Find matching line in .env file and replace it, or append if not found
+              if grep -q "^${secret_name}=" .env; then
+                sed -i "s|^${secret_name}=.*|${secret_name}=${secret_value}|g" .env
+              else
+                echo "${secret_name}=${secret_value}" >> .env
+              fi
+            fi
+          done
           
       - name: Scrape platform data
         run: |
