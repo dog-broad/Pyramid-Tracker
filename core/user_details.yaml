@@ -1,0 +1,42 @@
+# This file contains a list of colleges and their corresponding batches and
+# spreadsheets. The format is as follows:
+#
+# colleges:
+#   <college_name>:
+#     batches:
+#       <batch_year>:
+#         - <spreadsheet_url>
+#         - <spreadsheet_url>
+#
+# !!! THE <college_name> ANS <batch_year> VALUES SHOULD MATCH THE CONSTANTS IN `constants.py` !!!!
+#
+# https://docs.google.com/spreadsheets/d/<spreadsheet_id>/pub?output=csv&gid=<sheet_id>&single=true
+#
+# The sheet_id is the ID of the sheet that contains the list of students.
+# The single=true parameter is used to export only the specified sheet.
+# The list of students should have the following columns:
+#
+# - HallTicket Number
+# - GFG
+# - CODEFORCES
+# - LEETCODE
+# - CODECHEF
+# - HACKERRANK
+#
+# Ensure the columns maintain their order as specified above.
+# Column names can vary, but their sequence must remain unchanged.
+#
+# The Hall Ticket No column is used to match the students with their
+# corresponding ratings on the various platforms.
+
+colleges:
+  CMRIT:
+    batches:
+      2025:
+        - https://docs.google.com/spreadsheets/d/17ypZiX6LzgmADqSgDmQ3vytIrf1DkEHafIltWaXRlog/pub?output=csv&gid=0&single=true
+      2026:
+        - https://docs.google.com/spreadsheets/d/1UEPRw2UcWdw4ZpmO4qZ6nOhpCygz_MWqtgvO1ugWf_E/pub?output=csv&gid=0&single=true
+      2027:
+        - https://docs.google.com/spreadsheets/u/2/d/e/2PACX-1vRsneoGOzu7L_Qh5M5fuZNf97fc2kVIum0w_oslizePKgRhR9pJi4EWNv5tPV7TGuvl-F_Q9rgRFBkQ/pub?output=csv&gid=0&single=true
+
+

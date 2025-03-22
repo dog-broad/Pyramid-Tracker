@@ -1,17 +1,36 @@
+# Python
 __pycache__/
 *.pyc
 *.pyo
+
+# Data
 *.db
 *.xlsx
+*.csv
+*.json
 
+# Environment
+.env
+
+# Logs
 *.log
 
-/venv
-/reports
-/logs
+# Virtual Environment
+venv/
 
+# Reports
+reports/
+
+# Logs
+logs/
+
+# Data
+data/
+
+# Scripts
 geckodriver.exe
 load-env-as-secrets.ps1
 
+# Test
 foo.txt
 test.py

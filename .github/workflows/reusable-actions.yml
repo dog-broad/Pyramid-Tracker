@@ -1,0 +1,75 @@
+name: Reusable Actions for Pyramid-Tracker
+
+on:
+  workflow_call:
+    inputs:
+      python-version:
+        description: 'Python version to use'
+        default: '3.10'
+        required: false
+        type: string
+    secrets:
+      MONGODB_URI:
+        required: true
+      MONGODB_PASSWORD:
+        required: true
+      API_CODEFORCES_KEY:
+        required: true
+      API_CODEFORCES_SECRET:
+        required: true
+      API_CODECHEF_CLIENT_ID:
+        required: true
+      API_CODECHEF_CLIENT_SECRET:
+        required: true
+      API_GFG_USERNAME:
+        required: true
+      API_GFG_PASSWORD:
+        required: true
+
+jobs:
+  setup-python:
+    runs-on: ubuntu-latest
+    outputs:
+      cache-hit: ${{ steps.cache-dependencies.outputs.cache-hit }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ inputs.python-version }}
+          cache: 'pip'
+          
+      - name: Cache dependencies
+        id: cache-dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          
+  create-env-file:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        
+      - name: Create .env file
+        run: |
+          cp .env.example .env
+          # Update the .env file with actual credentials
+          sed -i 's|DB_MONGODB_URI=.*|DB_MONGODB_URI=${{ secrets.MONGODB_URI }}|g' .env
+          sed -i 's|DB_MONGODB_PASSWORD=.*|DB_MONGODB_PASSWORD=${{ secrets.MONGODB_PASSWORD }}|g' .env
+          sed -i 's|API_CODEFORCES_KEY=.*|API_CODEFORCES_KEY=${{ secrets.API_CODEFORCES_KEY }}|g' .env
+          sed -i 's|API_CODEFORCES_SECRET=.*|API_CODEFORCES_SECRET=${{ secrets.API_CODEFORCES_SECRET }}|g' .env
+          sed -i 's|API_CODECHEF_CLIENT_ID=.*|API_CODECHEF_CLIENT_ID=${{ secrets.API_CODECHEF_CLIENT_ID }}|g' .env
+          sed -i 's|API_CODECHEF_CLIENT_SECRET=.*|API_CODECHEF_CLIENT_SECRET=${{ secrets.API_CODECHEF_CLIENT_SECRET }}|g' .env
+          sed -i 's|API_GFG_USERNAME=.*|API_GFG_USERNAME=${{ secrets.API_GFG_USERNAME }}|g' .env
+          sed -i 's|API_GFG_PASSWORD=.*|API_GFG_PASSWORD=${{ secrets.API_GFG_PASSWORD }}|g' .env

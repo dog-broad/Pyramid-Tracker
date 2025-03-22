@@ -1,0 +1,147 @@
+name: Evaluation and Leaderboard
+
+on:
+  workflow_dispatch:
+    inputs:
+      college:
+        description: 'College to process'
+        required: true
+        default: 'CMRIT'
+        type: choice
+        options:
+          - CMRIT
+      batch:
+        description: 'Batch to process'
+        required: true
+        default: '_2025'
+        type: choice
+        options:
+          - _2025
+          - _2026
+          - _2027
+      action:
+        description: 'Action to perform'
+        required: true
+        default: 'both'
+        type: choice
+        options:
+          - evaluate
+          - leaderboard
+          - both
+      output:
+        description: 'Output file name for leaderboard (without path)'
+        required: false
+        default: 'leaderboard.xlsx'
+        type: string
+      charts:
+        description: 'Include charts in leaderboard'
+        required: false
+        default: 'true'
+        type: boolean
+      debug:
+        description: 'Enable debug mode with verbose logging'
+        required: false
+        default: 'false'
+        type: boolean
+        
+jobs:
+  setup:
+    uses: ./.github/workflows/reusable-actions.yml
+    secrets: inherit
+    
+  evaluation:
+    needs: setup
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.action == 'evaluate' || github.event.inputs.action == 'both' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          
+      - name: Create .env file
+        run: |
+          cp .env.example .env
+          # Update the .env file with actual credentials
+          sed -i 's|DB_MONGODB_URI=.*|DB_MONGODB_URI=${{ secrets.MONGODB_URI }}|g' .env
+          sed -i 's|DB_MONGODB_PASSWORD=.*|DB_MONGODB_PASSWORD=${{ secrets.MONGODB_PASSWORD }}|g' .env
+          
+      - name: Evaluate participants
+        run: |
+          debug_flag="${{ github.event.inputs.debug == 'true' && '--debug' || '' }}"
+          
+          # Run evaluation
+          python main.py $debug_flag evaluate \
+            --college ${{ github.event.inputs.college }} \
+            --batch ${{ github.event.inputs.batch }}
+            
+      - name: Upload logs
+        uses: actions/upload-artifact@v3
+        with:
+          name: evaluation-logs-${{ github.event.inputs.college }}-${{ github.event.inputs.batch }}-${{ github.run_id }}
+          path: logfile.log
+          retention-days: 7
+          
+  leaderboard:
+    needs: [setup, evaluation]
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.action == 'leaderboard' || github.event.inputs.action == 'both' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          
+      - name: Create .env file
+        run: |
+          cp .env.example .env
+          # Update the .env file with actual credentials
+          sed -i 's|DB_MONGODB_URI=.*|DB_MONGODB_URI=${{ secrets.MONGODB_URI }}|g' .env
+          sed -i 's|DB_MONGODB_PASSWORD=.*|DB_MONGODB_PASSWORD=${{ secrets.MONGODB_PASSWORD }}|g' .env
+          
+      - name: Create output directory
+        run: mkdir -p leaderboard_output
+          
+      - name: Generate leaderboard
+        run: |
+          debug_flag="${{ github.event.inputs.debug == 'true' && '--debug' || '' }}"
+          charts_flag="${{ github.event.inputs.charts == 'true' && '--charts' || '' }}"
+          
+          output_file="leaderboard_output/${{ github.event.inputs.college }}_${{ github.event.inputs.batch }}_${{ github.event.inputs.output }}"
+          
+          # Generate leaderboard
+          python main.py $debug_flag generate-leaderboard \
+            --college ${{ github.event.inputs.college }} \
+            --batch ${{ github.event.inputs.batch }} \
+            --output "$output_file" \
+            $charts_flag
+            
+      - name: Upload leaderboard
+        uses: actions/upload-artifact@v3
+        with:
+          name: leaderboard-${{ github.event.inputs.college }}-${{ github.event.inputs.batch }}-${{ github.run_id }}
+          path: leaderboard_output/*
+          retention-days: 30
+          
+      - name: Upload logs
+        uses: actions/upload-artifact@v3
+        with:
+          name: leaderboard-generation-logs-${{ github.event.inputs.college }}-${{ github.event.inputs.batch }}-${{ github.run_id }}
+          path: logfile.log
+          retention-days: 7

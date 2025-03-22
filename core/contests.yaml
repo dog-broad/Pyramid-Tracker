@@ -1,0 +1,52 @@
+hackerrank:
+  # Do not leave trailing slashes in the URLs (e.g., https://www.hackerrank.com/cmrit26-1-basics (correct), 
+  # https://www.hackerrank.com/cmrit26-2-lpb/ (incorrect)).
+  contests:
+    # Common contests for all colleges and batches
+    # These contests are available for all students, regardless of college or batch.
+    # If no common contests, leave it empty.
+    common: 
+      []
+
+    # College-specific contests
+    "CMR Institute of Technology":  # College name, refer to constants.py for the college name
+      # Common contests for all batches in this college
+      common: 
+        []
+
+      # Batch-specific contests
+      "2025":  # Batch 2025
+        # Contests specific to students in batch 2025
+        - https://www.hackerrank.com/cmrit25-1-basics
+        - https://www.hackerrank.com/cmrit25-4-rbd
+        - https://www.hackerrank.com/cmrit25-3-iterables
+        - https://www.hackerrank.com/cmrit25-2-lpb
+        - https://www.hackerrank.com/cmrit25-5-ds
+        - https://www.hackerrank.com/1-basics-2025
+        - https://www.hackerrank.com/2-loops-2025
+        - https://www.hackerrank.com/3-bitpat-2025
+        - https://www.hackerrank.com/4-iterables-2025
+        - https://www.hackerrank.com/5-recursion-2025
+        - https://www.hackerrank.com/strivers-sde-sheet
+        - https://www.hackerrank.com/ds-2025
+        - https://www.hackerrank.com/codevita-2025
+        - https://www.hackerrank.com/mentor-graphics-2025
+
+      "2026":  # Batch 2026
+        # Contests specific to students in batch 2026
+        - https://www.hackerrank.com/cmrit26-1-basics
+        - https://www.hackerrank.com/cmrit26-2-lpb
+        - https://www.hackerrank.com/cmrit-2y-2026
+        - https://www.hackerrank.com/cmrit-may-2024
+        - https://www.hackerrank.com/cmrit-june-2024
+        - https://www.hackerrank.com/cmrit-august-2024
+        - https://www.hackerrank.com/cmrit-september-2024
+        - https://www.hackerrank.com/cmrit-october-2024
+        - https://www.hackerrank.com/cmrit-november-2024
+        - https://www.hackerrank.com/cmrit26-january-2025
+        - https://www.hackerrank.com/cmrit26-february-2025
+        # You can add more contests here for batch 2026 if needed.
+
+      "2027":  # Batch 2027
+        # Contests specific to students in batch 2027
+        - https://www.hackerrank.com/cmrit-monthly-goal-november-2027

@@ -1,0 +1,104 @@
+name: Multi-Platform Scrape
+
+on:
+  workflow_dispatch:
+    inputs:
+      college:
+        description: 'College to process'
+        required: true
+        default: 'CMRIT'
+        type: choice
+        options:
+          - CMRIT
+      batch:
+        description: 'Batch to process'
+        required: true
+        default: '_2025'
+        type: choice
+        options:
+          - _2025
+          - _2026
+          - _2027
+      platforms:
+        description: 'Platforms to scrape (space-separated, or use ALL)'
+        required: true
+        default: 'ALL'
+        type: choice
+        options:
+          - ALL
+          - 'CODECHEF CODEFORCES'
+          - 'CODECHEF LEETCODE'
+          - 'CODEFORCES LEETCODE'
+          - 'CODECHEF CODEFORCES LEETCODE'
+          - 'HACKERRANK GEEKSFORGEEKS'
+          - 'CODECHEF CODEFORCES HACKERRANK GEEKSFORGEEKS LEETCODE'
+      test:
+        description: 'Run in test mode with limited participants'
+        required: false
+        default: 'false'
+        type: boolean
+      sample:
+        description: 'Number of random participants to select in test mode'
+        required: false
+        default: '20'
+        type: number
+      debug:
+        description: 'Enable debug mode with verbose logging'
+        required: false
+        default: 'false'
+        type: boolean
+
+jobs:
+  setup:
+    uses: ./.github/workflows/reusable-actions.yml
+    secrets: inherit
+    
+  multi-platform-scrape:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          
+      - name: Create .env file
+        run: |
+          cp .env.example .env
+          # Update the .env file with actual credentials
+          sed -i 's|DB_MONGODB_URI=.*|DB_MONGODB_URI=${{ secrets.MONGODB_URI }}|g' .env
+          sed -i 's|DB_MONGODB_PASSWORD=.*|DB_MONGODB_PASSWORD=${{ secrets.MONGODB_PASSWORD }}|g' .env
+          sed -i 's|API_CODEFORCES_KEY=.*|API_CODEFORCES_KEY=${{ secrets.API_CODEFORCES_KEY }}|g' .env
+          sed -i 's|API_CODEFORCES_SECRET=.*|API_CODEFORCES_SECRET=${{ secrets.API_CODEFORCES_SECRET }}|g' .env
+          sed -i 's|API_CODECHEF_CLIENT_ID=.*|API_CODECHEF_CLIENT_ID=${{ secrets.API_CODECHEF_CLIENT_ID }}|g' .env
+          sed -i 's|API_CODECHEF_CLIENT_SECRET=.*|API_CODECHEF_CLIENT_SECRET=${{ secrets.API_CODECHEF_CLIENT_SECRET }}|g' .env
+          sed -i 's|API_GFG_USERNAME=.*|API_GFG_USERNAME=${{ secrets.API_GFG_USERNAME }}|g' .env
+          sed -i 's|API_GFG_PASSWORD=.*|API_GFG_PASSWORD=${{ secrets.API_GFG_PASSWORD }}|g' .env
+          
+      - name: Scrape multiple platforms
+        run: |
+          debug_flag="${{ github.event.inputs.debug == 'true' && '--debug' || '' }}"
+          test_flag="${{ github.event.inputs.test == 'true' && '--test' || '' }}"
+          
+          # Run the multi-platform scraper
+          python main.py $debug_flag multi-scrape \
+            --college ${{ github.event.inputs.college }} \
+            --batch ${{ github.event.inputs.batch }} \
+            --platforms ${{ github.event.inputs.platforms }} \
+            $test_flag \
+            --sample ${{ github.event.inputs.sample }}
+            
+      - name: Upload logs
+        uses: actions/upload-artifact@v3
+        with:
+          name: multi-platform-scrape-logs-${{ github.event.inputs.college }}-${{ github.event.inputs.batch }}-${{ github.run_id }}
+          path: logfile.log
+          retention-days: 7
