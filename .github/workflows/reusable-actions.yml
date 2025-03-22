@@ -9,9 +9,11 @@ on:
         required: false
         type: string
     secrets:
-      MONGODB_URI:
+      DB_MONGODB_URI:
         required: true
-      MONGODB_PASSWORD:
+      DB_MONGODB_USERNAME:
+        required: true
+      DB_MONGODB_PASSWORD:
         required: true
       API_CODEFORCES_KEY:
         required: true
