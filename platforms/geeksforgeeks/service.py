@@ -121,6 +121,7 @@ class GeeksForGeeksService(BasePlatformService):
         Returns:
             List[Participant]: Updated list of participants with GeeksForGeeks data
         """
+        logger.info(f"Processing batch of {len(participants)} participants for GeeksForGeeks")
         start_time = time.time()
         results = []
         

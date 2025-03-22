@@ -173,6 +173,7 @@ class HackerRankService(BasePlatformService):
         Returns:
             List[Participant]: Updated list of participants with HackerRank data
         """
+        logger.info(f"Processing batch of {len(participants)} participants for HackerRank")
         start_time = time.time()
         results = []
         

@@ -61,7 +61,15 @@ class CodeChefService(BasePlatformService):
             raise
 
     async def process_batch(self, participants: List[Participant]) -> List[Participant]:
-        """Process a batch of participants"""
+        """Process a batch of participants
+
+        Args:
+            participants (List[Participant]): List of participants to process
+            
+        Returns:
+            List[Participant]: Updated list of participants with CodeChef data
+        """
+        logger.info(f"Processing batch of {len(participants)} participants for CodeChef")
         start_time = time.time()
         results = []
         for i, participant in enumerate(participants, start=1):

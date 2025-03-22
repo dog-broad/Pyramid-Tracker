@@ -102,6 +102,7 @@ class LeetCodeService(BasePlatformService):
         Returns:
             List[Participant]: Updated list of participants with LeetCode data
         """
+        logger.info(f"Processing batch of {len(participants)} participants for LeetCode")
         start_time = time.time()
         results = []
         

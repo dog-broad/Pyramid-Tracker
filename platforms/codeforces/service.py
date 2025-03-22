@@ -97,6 +97,7 @@ class CodeforcesService(BasePlatformService):
         Returns:
             List[Participant]: Updated list of participants with Codeforces data
         """
+        logger.info(f"Processing batch of {len(participants)} participants for Codeforces")
         start_time = time.time()
         results = []
         
