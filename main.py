@@ -108,7 +108,7 @@ def get_participants(repo, batch_enum, college_enum, test=False, sample=20):
 @click.option("--platform", type=click.Choice([p.name for p in Platform]), help="Platform name", required=True)
 @click.option("--test", is_flag=True, help="Enable test mode with limited participants", default=False)
 @click.option("--sample", type=int, help="Number of random participants to select in test mode", default=20)
-async def scrape(college: str, batch: str, platform: str, test: bool, sample: int) -> None:
+def scrape(college: str, batch: str, platform: str, test: bool, sample: int) -> None:
     """🕸️ Scrape participant data from coding platforms.
     
     This command scrapes data from the specified platform for all participants 
@@ -116,6 +116,10 @@ async def scrape(college: str, batch: str, platform: str, test: bool, sample: in
     
     Example: python main.py scrape --college CMRIT --batch _2025 --platform CODECHEF
     """
+    asyncio.run(_scrape(college, batch, platform, test, sample))
+
+
+async def _scrape(college: str, batch: str, platform: str, test: bool, sample: int) -> None:
     logger.info("Scraping users", college=college, batch=batch, platform=platform)
     batch_enum = Batch[batch]
     college_enum = College[college]
